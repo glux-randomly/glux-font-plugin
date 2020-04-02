@@ -1,92 +1,109 @@
 package dv.trung.glux;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
-import org.gradle.api.tasks.InputFile;
+import org.gradle.api.Project;
+import org.gradle.api.resources.TextResource;
+import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.TaskAction;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.util.Map;
 import java.util.TreeMap;
 
 public class GluxFontTask extends DefaultTask {
 
-    private File jsonFile;
-    private File newFile;
-
-    @InputFile
-    @Optional
-    public File getJsonFile() {
-        return jsonFile;
-    }
-
-    public void setJsonFile(File jsonFile) {
-        this.jsonFile = jsonFile;
-    }
+    private Project project;
+    private File intermediateDir;
+    private File fontsDir;
+    private String variantDir;
+    private String packageNameXOR1;
+    private TextResource packageNameXOR2;
 
     @OutputDirectory
-    public File getNewFile() {
-        return newFile;
+    public File getIntermediateDir() {
+        return intermediateDir;
     }
 
-    public void setNewFile(File newFile) {
-        this.newFile = newFile;
+    @Input
+    public String getVariantDir() {
+        return variantDir;
+    }
+
+    @Input
+    public File getFontsDir() {
+        return fontsDir;
+    }
+
+    /**
+     * Either packageNameXOR1 or packageNameXOR2 must be present, but both must be marked as @Optional or Gradle
+     * will throw an exception if one is missing.
+     */
+    @Input
+    @Optional
+    public String getPackageNameXOR1() {
+        return packageNameXOR1;
+    }
+
+    @Input
+    @Optional
+    public TextResource getPackageNameXOR2() {
+        return packageNameXOR2;
+    }
+
+    public void setProject(Project project) {
+        this.project = project;
+    }
+
+    public void setFontsDir(File fontsDir) {
+        this.fontsDir = fontsDir;
+    }
+
+    public void setIntermediateDir(File intermediateDir) {
+        this.intermediateDir = intermediateDir;
+    }
+
+    public void setVariantDir(String variantDir) {
+        this.variantDir = variantDir;
+    }
+
+    public void setPackageNameXOR1(String packageNameXOR1) {
+        this.packageNameXOR1 = packageNameXOR1;
+    }
+
+    public void setPackageNameXOR2(TextResource packageNameXOR2) {
+        this.packageNameXOR2 = packageNameXOR2;
     }
 
     @TaskAction
     public void action() throws IOException {
-        JsonElement root = new JsonParser().parse(new BufferedReader(new InputStreamReader(
-                new FileInputStream(jsonFile), "UTF-8")));
-        JsonObject rootObject = root.getAsJsonObject();
-
+        if (fontsDir == null || fontsDir.isFile()) {
+            project.getLogger().error("Please provide your custom font into fonts directory in the assets folder");
+            return;
+        }
+        File[] fonts = fontsDir.listFiles();
+        if (fonts == null || fonts.length == 0) {
+            project.getLogger().error("Please provide your custom font into fonts directory in the assets folder");
+            return;
+        }
         Map<String, String> resValues = new TreeMap<>();
-
-        // set value map from config json
-        for (String key: rootObject.keySet()) {
-            resValues.put(key, rootObject.get(key).getAsString());
+        for (File font : fonts) {
+            String fontName = font.getName();
+            String fontPath = String.format("fonts/%s", fontName);
+            resValues.put("path_" + fontName.replace("-", "_"), fontPath);
         }
 
         // write the values file.
-        File values = new File(newFile, "values");
+        File values = new File(intermediateDir, "values");
         if (!values.exists() && !values.mkdirs()) {
             throw new GradleException("Failed to create folder: " + values);
         }
 
-        PrintWriter fileWriter = new PrintWriter(new OutputStreamWriter(
-                new FileOutputStream(new File(values, "values.xml")), "UTF-8"));
-        fileWriter.print(mapToString(resValues));
-        fileWriter.flush();
-        fileWriter.close();
+        Files.asCharSink(new File(values, "values.xml"), Charsets.UTF_8).write(Utils.getValuesContent(resValues));
     }
-
-    /**
-     * This will get the map and convert it into Android String resource format string.
-     */
-    private static String mapToString(Map<String, String> values) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" + "<resources>\n");
-
-        for (Map.Entry<String, String> entry : values.entrySet()) {
-            String name = entry.getKey();
-            sb.append("    <string name=\"").append(name).append("\" translatable=\"false\">")
-                    .append(entry.getValue()).append("</string>\n");
-        }
-
-        sb.append("</resources>\n");
-
-        return sb.toString();
-    }
-
 }
