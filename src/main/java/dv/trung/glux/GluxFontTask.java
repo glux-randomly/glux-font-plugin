@@ -91,12 +91,24 @@ public class GluxFontTask extends DefaultTask {
             project.getLogger().error("Please provide your custom font into fonts directory in the assets folder");
             return;
         }
-        Map<String, String> resValues = new TreeMap<>();
+        StringBuilder sb = new StringBuilder(256);
+        sb.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" + "<resources>\n");
         for (File font : fonts) {
-            String fontName = font.getName();
-            String fontPath = String.format("fonts/%s", fontName);
-            resValues.put("path_" + fontName.replace("-", "_"), fontPath);
+            String[] splitName = font.getName().split("\\.");
+            if (splitName.length != 2) {
+                project.getLogger().error("Font " + font.getName() + " in the wrong format name. Format name is 'FontFamily-Style.ext'");
+                return;
+            }
+            String fontName = splitName[0].replace("-", ".");
+            String fontPath = String.format("fonts/%s", font.getName());
+            sb.append("    <string name=\"").append("path.").append(fontName.toLowerCase()).append("\" translatable=\"false\"").append(">").append(fontPath).append("</string>\n");
+            sb.append("    <style name=\"").append("TextAppearance.FontPath.").append(fontName).append("\" parent=\"android:TextAppearance\">\n");
+            sb.append("        <item name=\"fontPath\">").append("@string/").append("path.").append(fontName.toLowerCase()).append("</item>\n");
+            sb.append("        <item name=\"android:includeFontPadding\">false</item>\n");
+            sb.append("    </style>\n\n");
+
         }
+        sb.append("</resources>\n");
 
         // write the values file.
         File values = new File(intermediateDir, "values");
@@ -104,6 +116,6 @@ public class GluxFontTask extends DefaultTask {
             throw new GradleException("Failed to create folder: " + values);
         }
 
-        Files.asCharSink(new File(values, "values.xml"), Charsets.UTF_8).write(Utils.getValuesContent(resValues));
+        Files.asCharSink(new File(values, "values.xml"), Charsets.UTF_8).write(sb.toString());
     }
 }

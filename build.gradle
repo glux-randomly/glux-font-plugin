@@ -2,8 +2,10 @@ apply plugin: 'groovy'
 apply plugin: 'java-gradle-plugin'
 apply plugin: 'com.novoda.bintray-release'
 
+def versionPlugin = '0.0.7'
+
 group 'dv.trung.glux'
-version '0.0.2'
+version versionPlugin
 
 buildscript {
 
@@ -53,7 +55,7 @@ publish {
     repoName = 'glux'
     groupId = 'dv.trung.glux'
     artifactId = 'glux-font-plugin'
-    publishVersion = '0.0.2'
+    publishVersion = versionPlugin
     desc = 'Initial glux font plugin'
     licences = ['Apache-2.0']
 }
