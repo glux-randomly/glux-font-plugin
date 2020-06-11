@@ -2,7 +2,7 @@
 
 This is an Android plugin that helps you automatically generate font resources like `<string>` for `fontPath` and `<style>` for `android:TextAppearance`
 
-**Note: Combine use with https://github.com/glux-randomly/glux-font-compiler to create constant paths class and utils class from fonts to use in programming**
+**Note: Combine use with https://github.com/glux-randomly/glux-font-compiler to create constant paths class and utils class from fonts to use in android programmatically**
 
 #### Result
 
